@@ -1,0 +1,5 @@
+To build SO file for golib use:
+python golib/build_so.py
+
+To run the project use:
+python src/main.py
