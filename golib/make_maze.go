@@ -3,57 +3,49 @@ package main
 import (
 	"C"
 	"math/rand"
-	"strconv"
 )
+import "strconv"
 
-func itoa(goInt int) *C.char {
-	return C.CString((strconv.Itoa(goInt)))
-}
-
-func atoi(cStr *C.char) int {
-	goInt, _ := strconv.Atoi(C.GoString(cStr))
-	return goInt
-}
 
 const (
 	downLeft = iota
 	upLeft
 	upRight
 	downRight
+	center
+
+	cellIsAvailable = 1
+	cellIsNotAvailable = 2
 )
 
 var maze []byte
-var visitedCells []int
-var revisitedCells []int
 var size int
 var walls []int
 
 //export MakeMaze
-func MakeMaze(cSize *C.char, cI, cJ *C.char, cExit *C.char) *C.char {
+func MakeMaze(cSize *C.char, cExit *C.char) *C.char {
 
 	// Convertions
 	size = atoi(cSize)
-	i, j := atoi(cI), atoi(cJ)
-	exitI, exitJ := calcExit(atoi(cExit))
+	i, j := calcExit(atoi(cExit))
 
 	maze = make([]byte, size*size)
 	for i := range maze {
-		maze[i] = 2
+		maze[i] = cellIsNotAvailable
 	}
 
-	visitedCells = make([]int, 0, size*size)
-	revisitedCells = make([]int, 0, size*size)
-	walls = make([]int, 0, size*size)
+	visitedCells := make([]int, 0, size*size)
+	revisitedCells := make([]int, 0, size*size)
+	walls = make([]int, size*size)
 
-	maze[i*size+j] = 1
-	maze[exitI*size+exitJ] = 1
+	maze[i*size+j] = cellIsAvailable
 
 	for continueBuildingMaze := true; continueBuildingMaze; {
 		visitableNeighbors := checkNeighbors(i, j)
 		if len(visitableNeighbors) != 0 {
 			d := rand.Intn(len(visitableNeighbors))
 			position := visitableNeighbors[d]
-			maze[position] = 1
+			maze[position] = cellIsAvailable
 			visitedCells = append(visitedCells, position)
 			i, j = position/size, position%size
 		}
@@ -70,13 +62,9 @@ func MakeMaze(cSize *C.char, cI, cJ *C.char, cExit *C.char) *C.char {
 		}
 	}
 
-	if exitI < size/2 {
-		maze[(exitI+1)*size+exitJ] = 1
-	} else {
-		maze[(exitI-1)*size+exitJ] = 1
-	}
+	playerPosition := revisitedCells[rand.Intn(len(revisitedCells))]
 
-	return C.CString(string(maze))
+	return C.CString(string(maze) + strconv.Itoa(playerPosition))
 }
 
 func calcExit(exit int) (int, int) {
@@ -89,6 +77,8 @@ func calcExit(exit int) (int, int) {
 		return 1, size - 2
 	case downRight:
 		return size - 2, size - 2
+	case center:
+		return size - 1, size / 2
 	}
 	panic("calcExit: wrong params")
 }
